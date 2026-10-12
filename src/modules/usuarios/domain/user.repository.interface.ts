@@ -1,0 +1,7 @@
+import { UserEntity } from './user.entity';
+
+export interface IUserRepository {
+  findByEmail(email: string): Promise<UserEntity | null>;
+  findById(id: string): Promise<UserEntity | null>;
+  create(data: { email: string; passwordHash: string; role?: string }): Promise<UserEntity>;
+}
