@@ -1,0 +1,316 @@
+openapi: 3.0.3
+info:
+  title: E-Commerce API - Monólito Modular
+  version: 1.0.0
+  description: Contratos de API para os módulos de catálogo, carrinho, checkout, pagamentos e usuários.
+servers:
+  - url: http://localhost:3000
+    description: Ambiente de Desenvolvimento Local
+
+paths:
+  /v1/usuarios/signup:
+    post:
+      tags:
+        - Usuarios
+      summary: Cadastro de novo usuário
+      operationId: cadastrarUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: joao@exemplo.com
+                password:
+                  type: string
+                  format: password
+                  example: SenhaForte@123
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Dados inválidos ou e-mail já cadastrado
+
+  /v1/usuarios/login:
+    post:
+      tags:
+        - Usuarios
+      summary: Autenticação de usuário
+      operationId: autenticarUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Autenticado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Credenciais inválidas
+
+  /v1/catalogo/produtos:
+    get:
+      tags:
+        - Catalogo
+      summary: Listagem de produtos disponíveis
+      operationId: listarProdutos
+      responses:
+        '200':
+          description: Lista de produtos retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /v1/carrinho/items:
+    post:
+      tags:
+        - Carrinho
+      summary: Adiciona um item ao carrinho
+      operationId: adicionarItemCarrinho
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - qty
+              properties:
+                productId:
+                  type: string
+                qty:
+                  type: integer
+                  minimum: 1
+                  example: 1
+      responses:
+        '200':
+          description: Item adicionado ou atualizado no carrinho
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+
+  /v1/carrinho/items/{itemId}:
+    delete:
+      tags:
+        - Carrinho
+      summary: Remove um item do carrinho
+      operationId: removerItemCarrinho
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item removido com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          description: Item não encontrado no carrinho
+
+  /v1/checkout:
+    post:
+      tags:
+        - Pedidos
+      summary: Finaliza o carrinho e gera um novo pedido
+      operationId: realizarCheckout
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Pedido criado com sucesso a partir do carrinho
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Carrinho vazio ou estoque insuficiente
+
+  /v1/pagamentos:
+    post:
+      tags:
+        - Pagamentos
+      summary: Processamento simulado de pagamento para um pedido
+      operationId: processarPagamento
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - method
+              properties:
+                orderId:
+                  type: string
+                method:
+                  type: string
+                  enum: [PIX, CREDIT_CARD, BOLETO]
+                  example: PIX
+      responses:
+        '200':
+          description: Pagamento processado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Pedido não encontrado
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sku:
+          type: string
+        price:
+          type: number
+          format: double
+        stock:
+          type: integer
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        qty:
+          type: integer
+        unitPrice:
+          type: number
+          format: double
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        total:
+          type: number
+          format: double
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        qty:
+          type: integer
+        unitPrice:
+          type: number
+          format: double
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        total:
+          type: number
+          format: double
+        status:
+          type: string
+          example: PENDING
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        createdAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        provider:
+          type: string
+        status:
+          type: string
+          example: APPROVED
+        payload:
+          type: object
